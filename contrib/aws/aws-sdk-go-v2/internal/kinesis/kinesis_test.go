@@ -55,7 +55,7 @@ func TestEnrichOperation(t *testing.T) {
 	expectedPathway, ok := expectedKinesisPathway(spanCtx, "orders-stream", int64(putRecordsEntrySize(&params.Records[0])))
 	require.True(t, ok)
 
-	EnrichOperation(spanCtx, span, input, "PutRecords", true)
+	EnrichOperation(spanCtx, span, input, "PutRecords")
 
 	for _, record := range params.Records {
 		var payload map[string]interface{}
@@ -94,7 +94,7 @@ func TestInjectTraceContextSkipsMalformedData(t *testing.T) {
 		PartitionKey: aws.String("pk-1"),
 	}
 
-	EnrichOperation(spanCtx, span, middleware.InitializeInput{Parameters: params}, "PutRecord", true)
+	EnrichOperation(spanCtx, span, middleware.InitializeInput{Parameters: params}, "PutRecord")
 	assert.Equal(t, []byte("not-json"), params.Data)
 }
 

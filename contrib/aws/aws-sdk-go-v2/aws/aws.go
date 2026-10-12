@@ -146,19 +146,19 @@ func (mw *traceMiddleware) startTraceMiddleware(stack *middleware.Stack) error {
 		switch serviceID {
 		case "SQS":
 			if mw.cfg.injectSQS {
-				sqsTracer.EnrichOperation(spanctx, span, in, operation, true)
+				sqsTracer.EnrichOperation(spanctx, span, in, operation)
 			}
 		case "SNS":
 			if mw.cfg.injectSNS {
-				snsTracer.EnrichOperation(spanctx, span, in, operation, true)
+				snsTracer.EnrichOperation(spanctx, span, in, operation)
 			}
 		case "Kinesis":
 			if mw.cfg.injectKinesis {
-				kinesisTracer.EnrichOperation(spanctx, span, in, operation, true)
+				kinesisTracer.EnrichOperation(spanctx, span, in, operation)
 			}
 		case "EventBridge":
 			if mw.cfg.injectEventBridge {
-				eventBridgeTracer.EnrichOperation(spanctx, span, in, operation, true)
+				eventBridgeTracer.EnrichOperation(spanctx, span, in, operation)
 			}
 		case "SFN":
 			sfnTracer.EnrichOperation(span, in, operation)

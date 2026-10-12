@@ -28,16 +28,16 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
+func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
 	switch operation {
 	case "PutRecord":
-		handlePutRecord(ctx, span, in, inject)
+		handlePutRecord(ctx, span, in)
 	case "PutRecords":
-		handlePutRecords(ctx, span, in, inject)
+		handlePutRecords(ctx, span, in)
 	}
 }
 
-func handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*kinesis.PutRecordInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutRecord params")
@@ -49,14 +49,11 @@ func handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.Initi
 		instr.Logger().Debug("Unable to build trace context: %s", err.Error())
 		return
 	}
-	if !inject {
-		return
-	}
 
 	params.Data = injectTraceContext(carrier, params.Data, params.PartitionKey)
 }
 
-func handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*kinesis.PutRecordsInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutRecords params")
@@ -68,9 +65,6 @@ func handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.Init
 		carrier, err := getTraceContext(ctx, span, stream, int64(putRecordsEntrySize(&params.Records[i])))
 		if err != nil {
 			instr.Logger().Debug("Unable to build trace context: %s", err.Error())
-			continue
-		}
-		if !inject {
 			continue
 		}
 		params.Records[i].Data = injectTraceContext(carrier, params.Records[i].Data, params.Records[i].PartitionKey)

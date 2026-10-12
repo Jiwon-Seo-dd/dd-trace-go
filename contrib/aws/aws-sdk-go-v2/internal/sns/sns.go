@@ -33,16 +33,16 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
+func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
 	switch operation {
 	case "Publish":
-		handlePublish(ctx, span, in, inject)
+		handlePublish(ctx, span, in)
 	case "PublishBatch":
-		handlePublishBatch(ctx, span, in, inject)
+		handlePublishBatch(ctx, span, in)
 	}
 }
 
-func handlePublish(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func handlePublish(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*sns.PublishInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PublishInput params")
@@ -52,9 +52,6 @@ func handlePublish(ctx context.Context, span *tracer.Span, in middleware.Initial
 	traceContext, err := getTraceContext(ctx, span, destinationName(params.TopicArn, params.TargetArn), int64(publishInputSize(params)))
 	if err != nil {
 		instr.Logger().Debug("Unable to get trace context: %s", err.Error())
-		return
-	}
-	if !inject {
 		return
 	}
 
@@ -70,7 +67,7 @@ func handlePublish(ctx context.Context, span *tracer.Span, in middleware.Initial
 	injectTraceContext(traceContext, params.MessageAttributes)
 }
 
-func handlePublishBatch(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func handlePublishBatch(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*sns.PublishBatchInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PublishBatch params")
@@ -88,9 +85,6 @@ func handlePublishBatch(ctx context.Context, span *tracer.Span, in middleware.In
 		)
 		if err != nil {
 			instr.Logger().Debug("Unable to get trace context: %s", err.Error())
-			continue
-		}
-		if !inject {
 			continue
 		}
 		ctxSize := attributeSize(datadogKey, traceContext)
