@@ -29,17 +29,17 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
+func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
 	switch operation {
 	case "SendMessage":
-		handleSendMessage(ctx, span, in)
+		handleSendMessage(ctx, span, in, inject)
 	case "SendMessageBatch":
-		handleSendMessageBatch(ctx, span, in)
+		handleSendMessageBatch(ctx, span, in, inject)
 	}
 	span.SetTag(ext.MessagingSystem, ext.MessagingSystemSQS)
 }
 
-func handleSendMessage(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
+func handleSendMessage(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
 	params, ok := in.Parameters.(*sqs.SendMessageInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read SendMessage params")
@@ -51,6 +51,9 @@ func handleSendMessage(ctx context.Context, span *tracer.Span, in middleware.Ini
 		instr.Logger().Debug("Unable to get trace context: %s", err.Error())
 		return
 	}
+	if !inject {
+		return
+	}
 
 	if params.MessageAttributes == nil {
 		params.MessageAttributes = make(map[string]types.MessageAttributeValue)
@@ -59,7 +62,7 @@ func handleSendMessage(ctx context.Context, span *tracer.Span, in middleware.Ini
 	injectTraceContext(traceContext, params.MessageAttributes)
 }
 
-func handleSendMessageBatch(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
+func handleSendMessageBatch(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
 	params, ok := in.Parameters.(*sqs.SendMessageBatchInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read SendMessageBatch params")
@@ -70,6 +73,9 @@ func handleSendMessageBatch(ctx context.Context, span *tracer.Span, in middlewar
 		traceContext, err := getTraceContext(ctx, span, queueName(params.QueueUrl), sendMessageBatchEntrySize(&params.Entries[i]))
 		if err != nil {
 			instr.Logger().Debug("Unable to get trace context: %s", err.Error())
+			continue
+		}
+		if !inject {
 			continue
 		}
 		if params.Entries[i].MessageAttributes == nil {

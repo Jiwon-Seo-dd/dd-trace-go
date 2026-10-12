@@ -32,14 +32,14 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
+func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
 	switch operation {
 	case "PutEvents":
-		handlePutEvents(ctx, span, in)
+		handlePutEvents(ctx, span, in, inject)
 	}
 }
 
-func handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
+func handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
 	params, ok := in.Parameters.(*eventbridge.PutEventsInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutEvents params")
@@ -52,6 +52,9 @@ func handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.Initi
 		carrier, err := getTraceContext(ctx, span, &params.Entries[i], startTimeMillis)
 		if err != nil {
 			instr.Logger().Debug("Unable to build trace context: %s", err.Error())
+			continue
+		}
+		if !inject {
 			continue
 		}
 		injectTraceContext(carrier, &params.Entries[i])

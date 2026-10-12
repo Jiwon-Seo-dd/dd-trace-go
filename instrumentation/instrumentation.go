@@ -223,6 +223,12 @@ func (i *Instrumentation) OTelSemanticsEnabled() bool {
 	return internalconfig.Get().OTelSemanticsEnabled()
 }
 
+// InjectDatadogAttributeEnabled reports whether the trace context may be injected into messages
+// sent to the given AWS service ("kinesis", "eventbridge", "sqs" or "sns").
+func (i *Instrumentation) InjectDatadogAttributeEnabled(service string) bool {
+	return internalconfig.Get().InjectDatadogAttributeEnabled(service)
+}
+
 func (i *Instrumentation) AppSecEnabled() bool {
 	return appsec.Enabled()
 }

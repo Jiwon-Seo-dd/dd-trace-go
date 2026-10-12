@@ -145,13 +145,21 @@ func (mw *traceMiddleware) startTraceMiddleware(stack *middleware.Stack) error {
 		// Inject trace context
 		switch serviceID {
 		case "SQS":
-			sqsTracer.EnrichOperation(spanctx, span, in, operation)
+			if mw.cfg.injectSQS {
+				sqsTracer.EnrichOperation(spanctx, span, in, operation, true)
+			}
 		case "SNS":
-			snsTracer.EnrichOperation(spanctx, span, in, operation)
+			if mw.cfg.injectSNS {
+				snsTracer.EnrichOperation(spanctx, span, in, operation, true)
+			}
 		case "Kinesis":
-			kinesisTracer.EnrichOperation(spanctx, span, in, operation)
+			if mw.cfg.injectKinesis {
+				kinesisTracer.EnrichOperation(spanctx, span, in, operation, true)
+			}
 		case "EventBridge":
-			eventBridgeTracer.EnrichOperation(spanctx, span, in, operation)
+			if mw.cfg.injectEventBridge {
+				eventBridgeTracer.EnrichOperation(spanctx, span, in, operation, true)
+			}
 		case "SFN":
 			sfnTracer.EnrichOperation(span, in, operation)
 		case "DynamoDB":
