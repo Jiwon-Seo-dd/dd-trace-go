@@ -132,7 +132,7 @@ func TestEnrichOperation(t *testing.T) {
 			ctx, _ := tracer.SetDataStreamsCheckpoint(context.Background(), "direction:in", "topic:upstream", "type:kafka")
 			span, spanCtx := tracer.StartSpanFromContext(ctx, "test-span")
 
-			EnrichOperation(spanCtx, span, tt.input, tt.operation)
+			EnrichOperation(spanCtx, span, tt.input, tt.operation, true)
 
 			if tt.check != nil {
 				tt.check(t, tt.input, span, spanCtx)
@@ -156,7 +156,7 @@ func TestPublishSizeLimit(t *testing.T) {
 			},
 		}
 
-		EnrichOperation(spanCtx, span, input, "Publish")
+		EnrichOperation(spanCtx, span, input, "Publish", true)
 
 		params := input.Parameters.(*sns.PublishInput)
 		assert.NotContains(t, params.MessageAttributes, datadogKey)
@@ -191,7 +191,7 @@ func TestPublishSizeLimit(t *testing.T) {
 			},
 		}
 
-		EnrichOperation(spanCtx, span, input, "Publish")
+		EnrichOperation(spanCtx, span, input, "Publish", true)
 
 		params := input.Parameters.(*sns.PublishInput)
 		assert.NotContains(t, params.MessageAttributes, datadogKey)
@@ -227,7 +227,7 @@ func TestPublishBatchSizeLimit(t *testing.T) {
 			},
 		}
 
-		EnrichOperation(spanCtx, span, input, "PublishBatch")
+		EnrichOperation(spanCtx, span, input, "PublishBatch", true)
 
 		params := input.Parameters.(*sns.PublishBatchInput)
 		assert.Contains(t, params.PublishBatchRequestEntries[0].MessageAttributes, datadogKey)
@@ -270,7 +270,7 @@ func TestPublishBatchSizeLimit(t *testing.T) {
 			},
 		}
 
-		EnrichOperation(spanCtx, span, input, "PublishBatch")
+		EnrichOperation(spanCtx, span, input, "PublishBatch", true)
 
 		params := input.Parameters.(*sns.PublishBatchInput)
 		assert.NotContains(t, params.PublishBatchRequestEntries[0].MessageAttributes, datadogKey,
@@ -295,7 +295,7 @@ func TestPublishBatchSizeLimit(t *testing.T) {
 			},
 		}
 
-		EnrichOperation(spanCtx, span, input, "PublishBatch")
+		EnrichOperation(spanCtx, span, input, "PublishBatch", true)
 
 		params := input.Parameters.(*sns.PublishBatchInput)
 		assert.NotContains(t, params.PublishBatchRequestEntries[0].MessageAttributes, datadogKey)

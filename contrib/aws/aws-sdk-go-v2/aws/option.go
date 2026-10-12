@@ -16,6 +16,11 @@ type config struct {
 	serviceSource string
 	analyticsRate float64
 	errCheck      func(err error) bool
+
+	injectKinesis     bool
+	injectEventBridge bool
+	injectSQS         bool
+	injectSNS         bool
 }
 
 // Option describes options for the AWS integration.
@@ -32,6 +37,12 @@ func (fn OptionFn) apply(cfg *config) {
 
 func defaults(cfg *config) {
 	cfg.analyticsRate = instr.AnalyticsRate(false)
+	// Turning injection off only skips writing the payload. The span and the Data Streams
+	// checkpoint are still recorded.
+	cfg.injectKinesis = instr.InjectDatadogAttributeEnabled("kinesis")
+	cfg.injectEventBridge = instr.InjectDatadogAttributeEnabled("eventbridge")
+	cfg.injectSQS = instr.InjectDatadogAttributeEnabled("sqs")
+	cfg.injectSNS = instr.InjectDatadogAttributeEnabled("sns")
 }
 
 // WithService sets the given service name for the dialled connection.

@@ -62,7 +62,7 @@ func TestEnrichOperation(t *testing.T) {
 		require.True(t, ok)
 	}
 
-	EnrichOperation(spanCtx, span, input, "PutEvents")
+	EnrichOperation(spanCtx, span, input, "PutEvents", true)
 
 	require.Len(t, params.Entries, 2)
 
