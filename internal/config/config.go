@@ -859,23 +859,36 @@ func (c *Config) SetRuntimeMetricsOtelEnabled(enabled bool, origin telemetry.Ori
 	configtelemetry.Report("DD_METRICS_OTEL_ENABLED", enabled, origin)
 }
 
-// InjectDatadogAttributeEnabled reports whether the Datadog trace context may be written into
-// requests sent to the given AWS service: "kinesis", "eventbridge", "sqs" or "sns".
-// Other services are not configurable and report true.
-func (c *Config) InjectDatadogAttributeEnabled(service string) bool {
+// KinesisInjectDatadogAttributeEnabled reports whether the Datadog trace context may be written
+// into Kinesis records.
+func (c *Config) KinesisInjectDatadogAttributeEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	switch service {
-	case "kinesis":
-		return c.injectKinesis
-	case "eventbridge":
-		return c.injectEventBridge
-	case "sqs":
-		return c.injectSQS
-	case "sns":
-		return c.injectSNS
-	}
-	return true
+	return c.injectKinesis
+}
+
+// EventBridgeInjectDatadogAttributeEnabled reports whether the Datadog trace context may be
+// written into EventBridge event details.
+func (c *Config) EventBridgeInjectDatadogAttributeEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.injectEventBridge
+}
+
+// SQSInjectDatadogAttributeEnabled reports whether the Datadog trace context may be written into
+// SQS message attributes.
+func (c *Config) SQSInjectDatadogAttributeEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.injectSQS
+}
+
+// SNSInjectDatadogAttributeEnabled reports whether the Datadog trace context may be written into
+// SNS message attributes.
+func (c *Config) SNSInjectDatadogAttributeEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.injectSNS
 }
 
 func (c *Config) DataStreamsMonitoringEnabled() bool {

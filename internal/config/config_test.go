@@ -2215,11 +2215,15 @@ func TestFlaggingProviderInitTimeout(t *testing.T) {
 }
 
 func TestInjectDatadogAttributeEnabled(t *testing.T) {
-	envs := map[string]string{
-		"kinesis":     "DD_TRACE_KINESIS_INJECT_DATADOG_ATTRIBUTE_ENABLED",
-		"eventbridge": "DD_TRACE_EVENTBRIDGE_INJECT_DATADOG_ATTRIBUTE_ENABLED",
-		"sqs":         "DD_TRACE_SQS_INJECT_DATADOG_ATTRIBUTE_ENABLED",
-		"sns":         "DD_TRACE_SNS_INJECT_DATADOG_ATTRIBUTE_ENABLED",
+	services := []struct {
+		name    string
+		env     string
+		enabled func(*Config) bool
+	}{
+		{"kinesis", "DD_TRACE_KINESIS_INJECT_DATADOG_ATTRIBUTE_ENABLED", (*Config).KinesisInjectDatadogAttributeEnabled},
+		{"eventbridge", "DD_TRACE_EVENTBRIDGE_INJECT_DATADOG_ATTRIBUTE_ENABLED", (*Config).EventBridgeInjectDatadogAttributeEnabled},
+		{"sqs", "DD_TRACE_SQS_INJECT_DATADOG_ATTRIBUTE_ENABLED", (*Config).SQSInjectDatadogAttributeEnabled},
+		{"sns", "DD_TRACE_SNS_INJECT_DATADOG_ATTRIBUTE_ENABLED", (*Config).SNSInjectDatadogAttributeEnabled},
 	}
 
 	t.Run("default", func(t *testing.T) {
@@ -2227,28 +2231,21 @@ func TestInjectDatadogAttributeEnabled(t *testing.T) {
 		defer resetGlobalState()
 
 		cfg := Get()
-		for service := range envs {
-			assert.True(t, cfg.InjectDatadogAttributeEnabled(service), service)
+		for _, s := range services {
+			assert.True(t, s.enabled(cfg), s.name)
 		}
 	})
 
-	for disabled, env := range envs {
-		t.Run("only "+disabled+" disabled", func(t *testing.T) {
+	for _, disabled := range services {
+		t.Run("only "+disabled.name+" disabled", func(t *testing.T) {
 			resetGlobalState()
 			defer resetGlobalState()
-			t.Setenv(env, "false")
+			t.Setenv(disabled.env, "false")
 
 			cfg := Get()
-			for service := range envs {
-				assert.Equal(t, service != disabled, cfg.InjectDatadogAttributeEnabled(service), service)
+			for _, s := range services {
+				assert.Equal(t, s.name != disabled.name, s.enabled(cfg), s.name)
 			}
 		})
 	}
-
-	t.Run("unconfigurable service", func(t *testing.T) {
-		resetGlobalState()
-		defer resetGlobalState()
-
-		assert.True(t, Get().InjectDatadogAttributeEnabled("s3"))
-	})
 }
