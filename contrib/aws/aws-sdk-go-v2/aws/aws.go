@@ -64,7 +64,13 @@ func prepConfig(opts ...Option) *config {
 }
 
 func appendMiddleware(cfg *config, apiOptions *[]func(*middleware.Stack) error) {
-	tm := traceMiddleware{cfg: cfg}
+	tm := traceMiddleware{
+		cfg:         cfg,
+		sqs:         sqsTracer.NewEnricher(cfg.injectSQS),
+		sns:         snsTracer.NewEnricher(cfg.injectSNS),
+		kinesis:     kinesisTracer.NewEnricher(cfg.injectKinesis),
+		eventBridge: eventBridgeTracer.NewEnricher(cfg.injectEventBridge),
+	}
 	*apiOptions = append(*apiOptions, tm.initTraceMiddleware, tm.startTraceMiddleware, tm.deserializeTraceMiddleware)
 }
 
@@ -79,7 +85,11 @@ func AppendMiddleware(awsCfg *aws.Config, opts ...Option) {
 }
 
 type traceMiddleware struct {
-	cfg *config
+	cfg         *config
+	sqs         *sqsTracer.Enricher
+	sns         *snsTracer.Enricher
+	kinesis     *kinesisTracer.Enricher
+	eventBridge *eventBridgeTracer.Enricher
 }
 
 func (mw *traceMiddleware) initTraceMiddleware(stack *middleware.Stack) error {
@@ -145,13 +155,13 @@ func (mw *traceMiddleware) startTraceMiddleware(stack *middleware.Stack) error {
 		// Inject trace context
 		switch serviceID {
 		case "SQS":
-			sqsTracer.EnrichOperation(spanctx, span, in, operation, mw.cfg.injectSQS)
+			mw.sqs.EnrichOperation(spanctx, span, in, operation)
 		case "SNS":
-			snsTracer.EnrichOperation(spanctx, span, in, operation, mw.cfg.injectSNS)
+			mw.sns.EnrichOperation(spanctx, span, in, operation)
 		case "Kinesis":
-			kinesisTracer.EnrichOperation(spanctx, span, in, operation, mw.cfg.injectKinesis)
+			mw.kinesis.EnrichOperation(spanctx, span, in, operation)
 		case "EventBridge":
-			eventBridgeTracer.EnrichOperation(spanctx, span, in, operation, mw.cfg.injectEventBridge)
+			mw.eventBridge.EnrichOperation(spanctx, span, in, operation)
 		case "SFN":
 			sfnTracer.EnrichOperation(span, in, operation)
 		case "DynamoDB":

@@ -32,14 +32,26 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
+// Enricher adds the Datadog trace context and the Data Streams checkpoint to EventBridge requests.
+// The zero value injects the trace context.
+type Enricher struct {
+	noInject bool
+}
+
+// NewEnricher returns an Enricher that writes the trace context into the request only if inject is true.
+// The span tags and the Data Streams checkpoint are recorded either way.
+func NewEnricher(inject bool) *Enricher {
+	return &Enricher{noInject: !inject}
+}
+
+func (e *Enricher) EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
 	switch operation {
 	case "PutEvents":
-		handlePutEvents(ctx, span, in, inject)
+		e.handlePutEvents(ctx, span, in)
 	}
 }
 
-func handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func (e *Enricher) handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*eventbridge.PutEventsInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutEvents params")
@@ -54,7 +66,7 @@ func handlePutEvents(ctx context.Context, span *tracer.Span, in middleware.Initi
 			instr.Logger().Debug("Unable to build trace context: %s", err.Error())
 			continue
 		}
-		if !inject {
+		if e.noInject {
 			continue
 		}
 		injectTraceContext(carrier, &params.Entries[i])

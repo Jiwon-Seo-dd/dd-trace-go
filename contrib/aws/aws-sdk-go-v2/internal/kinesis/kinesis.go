@@ -28,16 +28,28 @@ const (
 
 var instr = internal.Instr
 
-func EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string, inject bool) {
+// Enricher adds the Datadog trace context and the Data Streams checkpoint to Kinesis requests.
+// The zero value injects the trace context.
+type Enricher struct {
+	noInject bool
+}
+
+// NewEnricher returns an Enricher that writes the trace context into the request only if inject is true.
+// The span tags and the Data Streams checkpoint are recorded either way.
+func NewEnricher(inject bool) *Enricher {
+	return &Enricher{noInject: !inject}
+}
+
+func (e *Enricher) EnrichOperation(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, operation string) {
 	switch operation {
 	case "PutRecord":
-		handlePutRecord(ctx, span, in, inject)
+		e.handlePutRecord(ctx, span, in)
 	case "PutRecords":
-		handlePutRecords(ctx, span, in, inject)
+		e.handlePutRecords(ctx, span, in)
 	}
 }
 
-func handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func (e *Enricher) handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*kinesis.PutRecordInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutRecord params")
@@ -49,14 +61,14 @@ func handlePutRecord(ctx context.Context, span *tracer.Span, in middleware.Initi
 		instr.Logger().Debug("Unable to build trace context: %s", err.Error())
 		return
 	}
-	if !inject {
+	if e.noInject {
 		return
 	}
 
 	params.Data = injectTraceContext(carrier, params.Data, params.PartitionKey)
 }
 
-func handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.InitializeInput, inject bool) {
+func (e *Enricher) handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.InitializeInput) {
 	params, ok := in.Parameters.(*kinesis.PutRecordsInput)
 	if !ok {
 		instr.Logger().Debug("Unable to read PutRecords params")
@@ -70,7 +82,7 @@ func handlePutRecords(ctx context.Context, span *tracer.Span, in middleware.Init
 			instr.Logger().Debug("Unable to build trace context: %s", err.Error())
 			continue
 		}
-		if !inject {
+		if e.noInject {
 			continue
 		}
 		params.Records[i].Data = injectTraceContext(carrier, params.Records[i].Data, params.Records[i].PartitionKey)

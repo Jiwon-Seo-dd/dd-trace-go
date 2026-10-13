@@ -55,7 +55,7 @@ func TestEnrichOperation(t *testing.T) {
 	expectedPathway, ok := expectedKinesisPathway(spanCtx, "orders-stream", int64(putRecordsEntrySize(&params.Records[0])))
 	require.True(t, ok)
 
-	EnrichOperation(spanCtx, span, input, "PutRecords", true)
+	NewEnricher(true).EnrichOperation(spanCtx, span, input, "PutRecords")
 
 	for _, record := range params.Records {
 		var payload map[string]interface{}
@@ -94,7 +94,7 @@ func TestInjectTraceContextSkipsMalformedData(t *testing.T) {
 		PartitionKey: aws.String("pk-1"),
 	}
 
-	EnrichOperation(spanCtx, span, middleware.InitializeInput{Parameters: params}, "PutRecord", true)
+	NewEnricher(true).EnrichOperation(spanCtx, span, middleware.InitializeInput{Parameters: params}, "PutRecord")
 	assert.Equal(t, []byte("not-json"), params.Data)
 }
 
@@ -122,4 +122,37 @@ func expectedKinesisPathway(ctx context.Context, stream string, payloadSize int6
 	}
 	pathway, ok := datastreams.PathwayFromContext(expectedCtx)
 	return pathway, ok
+}
+
+func TestEnricherInjection(t *testing.T) {
+	const original = `{"message":"hello"}`
+	tests := []struct {
+		name     string
+		enricher *Enricher
+		injected bool
+	}{
+		{"zero value injects", &Enricher{}, true},
+		{"enabled", NewEnricher(true), true},
+		{"disabled", NewEnricher(false), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mt := mocktracer.Start()
+			defer mt.Stop()
+
+			span, spanCtx := tracer.StartSpanFromContext(context.Background(), "test-span")
+			params := &kinesis.PutRecordInput{
+				StreamName:   aws.String("orders-stream"),
+				Data:         []byte(original),
+				PartitionKey: aws.String("pk-1"),
+			}
+
+			tt.enricher.EnrichOperation(spanCtx, span, middleware.InitializeInput{Parameters: params}, "PutRecord")
+
+			assert.Equal(t, tt.injected, strings.Contains(string(params.Data), "_datadog"))
+			if !tt.injected {
+				assert.JSONEq(t, original, string(params.Data))
+			}
+		})
+	}
 }
